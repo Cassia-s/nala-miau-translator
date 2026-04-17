@@ -337,13 +337,6 @@ with colB:
         unsafe_allow_html=True,
     )
 
-    st.markdown("### Perfil da Nala")
-    st.write("- 5 meses")
-    st.write("- Mia pouco")
-    st.write("- Mais vocal de madrugada/manhã e à noite")
-    st.write("- Miado de porta é longo e crescente")
-    st.write("- Miado na caixa ocorre durante o cocô")
-
 st.markdown("---")
 
 aba1, aba2 = st.tabs(["Eventos salvos", "Resumo"])
