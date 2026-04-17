@@ -6,4 +6,4 @@ nala-miau-translator
 App que interpreta miados com base em contexto e comportamento.
 
 ## 🚀 Acesse o app
-(https://nala-miau-translator.streamlit.app)
+https://nala-miau-translator.streamlit.app
