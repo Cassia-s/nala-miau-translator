@@ -391,7 +391,7 @@ with colA:
         sample_name = "Miado ao acordar"  # valor padrão seguro
 
         if audio: sample_name = suggest_sample_from_audio(audio)
-            st.success(f"🔍 Áudio analisado automaticamente → {sample_name}")
+        st.success(f"🔍 Áudio analisado automaticamente → {sample_name}")
 
         usar_ajuste_manual = st.toggle("Ajustar previsão manualmente", value=False)
 
