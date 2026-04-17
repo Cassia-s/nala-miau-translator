@@ -260,7 +260,7 @@ st.markdown(
     """
     <div class='hero'>
         <h1>🐱 Nala Translator</h1>
-        <p class='small'>Protótipo para interpretar miados com menos formulário e mais experiência de uso. Hoje ele funciona com amostras provisórias e regras comportamentais; depois você pode trocar pelos áudios reais da Nala.</p>
+        <p class='small'/p>
     </div>
     """,
     unsafe_allow_html=True,
