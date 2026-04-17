@@ -2,9 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, time
 from pathlib import Path
-from datetime import datetime
 from zoneinfo import ZoneInfo
-
 
 st.set_page_config(page_title="Nala Translator", page_icon="🐱", layout="wide")
 
@@ -190,6 +188,7 @@ def classify_miau(event: dict) -> tuple[str, str, list[tuple[str, int]]]:
 
     if event["tipo_miado"] == "resmungo":
         scores["reclamacao_frustracao"] += 4
+
     situacao = event["situacao_antes"].lower()
     if "cacando" in situacao or "caçando" in situacao:
         scores["reclamacao_frustracao"] += 3
@@ -203,19 +202,21 @@ def classify_miau(event: dict) -> tuple[str, str, list[tuple[str, int]]]:
     ranking = sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
     explanations = {
-        "pedido_porta": "Hipotese principal: ela quer acesso a um ambiente. O padrao combina com miado de porta, mais longo e insistente.",
-        "pedido_atencao": "Hipotese principal: ela quer atencao ou quer iniciar a rotina com voces.",
-        "reclamacao_frustracao": "Hipotese principal: ela esta reclamando ou frustrada com alguma interrupcao ou tentativa de cacar.",
-        "caixa_areia_coco": "Hipotese principal: miado associado ao uso da caixa, especialmente no horario em que isso costuma acontecer.",
-        "indefinido": "Nao ha contexto suficiente para uma conclusao forte. Vale observar local e o que acontece logo depois.",
+        "pedido_porta": "Hipótese principal: ela quer acesso a um ambiente. O padrão combina com miado de porta, mais longo e insistente.",
+        "pedido_atencao": "Hipótese principal: ela quer atenção ou quer iniciar a rotina com vocês.",
+        "reclamacao_frustracao": "Hipótese principal: ela está reclamando ou frustrada com alguma interrupção ou tentativa de caçar.",
+        "caixa_areia_coco": "Hipótese principal: miado associado ao uso da caixa, especialmente no horário em que isso costuma acontecer.",
+        "indefinido": "Não há contexto suficiente para uma conclusão forte. Vale observar local e o que acontece logo depois.",
     }
     return best_label, explanations[best_label], ranking
 
 
 def build_event_from_demo(sample_name: str, hora_str: str) -> dict:
     sample = DEMO_MIAUS[sample_name]
+    agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
+
     return {
-        "data": str(datetime.today().date()),
+        "data": agora.strftime("%Y-%m-%d"),
         "hora": hora_str,
         "fonte": "demo",
         "local": sample["local"],
@@ -263,7 +264,10 @@ st.markdown(
     """
     <div class='hero'>
         <h1>🐱 Nala Translator</h1>
-        <p class='small'</div>
+        <p class='small'>
+            Protótipo para interpretar miados com base em contexto, rotina e padrões provisórios.
+        </p>
+    </div>
     """,
     unsafe_allow_html=True,
 )
@@ -272,10 +276,15 @@ colA, colB = st.columns([1.4, 1])
 
 with colA:
     st.markdown("### Teste rápido")
-    modo = st.radio("Como deseja testar?", ["Escolher um miado provisório", "Enviar um áudio"], horizontal=True)
+    modo = st.radio(
+        "Como deseja testar?",
+        ["Escolher um miado provisório", "Enviar um áudio"],
+        horizontal=True,
+    )
 
-    hora_evento = st.time_input("Horário do evento", value=datetime.now().time().replace(second=0, microsecond=0))
-    hora_str = hora_evento.strftime("%H:%M")
+    agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
+    hora_str = agora.strftime("%H:%M")
+    st.caption(f"🕒 Horário automático: {hora_str}")
 
     if modo == "Escolher um miado provisório":
         sample_name = st.selectbox("Escolha o tipo de miado", list(DEMO_MIAUS.keys()))
@@ -284,40 +293,48 @@ with colA:
     else:
         audio = st.file_uploader("Envie um áudio de miado", type=["wav", "mp3", "m4a"])
         st.caption("Neste MVP, o áudio ainda não é analisado automaticamente. Ele serve como etapa visual de evolução do projeto.")
-        sample_name = st.selectbox("Enquanto o classificador de áudio real não fica pronto, escolha a amostra mais parecida", list(DEMO_MIAUS.keys()))
+        sample_name = st.selectbox(
+            "Enquanto o classificador de áudio real não fica pronto, escolha a amostra mais parecida",
+            list(DEMO_MIAUS.keys())
+        )
         event = build_event_from_demo(sample_name, hora_str)
         event["fonte"] = "audio_upload" if audio else "demo"
 
     if st.button("Interpretar miado", type="primary", use_container_width=True):
         classe, explicacao, ranking = classify_miau(event)
 
-        st.markdown(f"""
-        <div class='card'>
-            <h3>Hipótese principal</h3>
-            <h2>{classe}</h2>
-            <p>{explicacao}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class='card'>
+                <h3>Hipótese principal</h3>
+                <h2>{classe}</h2>
+                <p>{explicacao}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
         st.markdown("#### Ranking de hipóteses")
         ranking_df = pd.DataFrame(ranking, columns=["hipotese", "pontuacao"])
         st.dataframe(ranking_df, use_container_width=True, hide_index=True)
 
-        save_event({
-            "data": str(datetime.today().date()),
-            "hora": hora_str,
-            "fonte": event.get("fonte", "demo"),
-            "local": event["local"],
-            "tipo_miado": event["tipo_miado"],
-            "intensidade": event["intensidade"],
-            "duracao": event["duracao"],
-            "repeticao": event["repeticao"],
-            "perto_porta": event["perto_porta"],
-            "perto_caixa": event["perto_caixa"],
-            "humanos_na_cama": event["humanos_na_cama"],
-            "situacao_antes": event["situacao_antes"],
-            "classe_real": classe,
-        })
+        save_event(
+            {
+                "data": agora.strftime("%Y-%m-%d"),
+                "hora": hora_str,
+                "fonte": event.get("fonte", "demo"),
+                "local": event["local"],
+                "tipo_miado": event["tipo_miado"],
+                "intensidade": event["intensidade"],
+                "duracao": event["duracao"],
+                "repeticao": event["repeticao"],
+                "perto_porta": event["perto_porta"],
+                "perto_caixa": event["perto_caixa"],
+                "humanos_na_cama": event["humanos_na_cama"],
+                "situacao_antes": event["situacao_antes"],
+                "classe_real": classe,
+            }
+        )
 
 with colB:
     st.markdown("### Como o MVP funciona")
