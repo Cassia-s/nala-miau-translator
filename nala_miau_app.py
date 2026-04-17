@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 st.set_page_config(page_title="Nala Translator", page_icon="🐱", layout="wide")
 
 DATA_FILE = Path("nala_miados.csv")
+TIMEZONE = ZoneInfo("America/Sao_Paulo")
 
 ROTINA = {
     "acorda_inicio": time(5, 0),
@@ -25,6 +26,8 @@ ROTINA = {
 CLASSES = [
     "pedido_porta",
     "pedido_atencao",
+    "miado_atencao",
+    "miado_carinho",
     "reclamacao_frustracao",
     "caixa_areia_coco",
     "indefinido",
@@ -39,6 +42,7 @@ DEMO_MIAUS = {
         "perto_porta": "sim",
         "perto_caixa": "nao",
         "humanos_na_cama": "nao",
+        "ronronando": "nao",
         "local": "porta quarto",
         "situacao_antes": "porta fechada",
     },
@@ -50,6 +54,7 @@ DEMO_MIAUS = {
         "perto_porta": "nao",
         "perto_caixa": "nao",
         "humanos_na_cama": "sim",
+        "ronronando": "nao",
         "local": "quarto",
         "situacao_antes": "voces ainda estavam dormindo",
     },
@@ -61,6 +66,7 @@ DEMO_MIAUS = {
         "perto_porta": "nao",
         "perto_caixa": "sim",
         "humanos_na_cama": "nao",
+        "ronronando": "nao",
         "local": "caixa",
         "situacao_antes": "entrou na caixa",
     },
@@ -72,10 +78,40 @@ DEMO_MIAUS = {
         "perto_porta": "nao",
         "perto_caixa": "nao",
         "humanos_na_cama": "nao",
+        "ronronando": "nao",
         "local": "quintal",
         "situacao_antes": "cacando e frustrada",
     },
+    "Miado de atencao": {
+        "tipo_miado": "curto",
+        "intensidade": "baixa",
+        "duracao": "curta",
+        "repeticao": "varios_miadinhos",
+        "perto_porta": "nao",
+        "perto_caixa": "nao",
+        "humanos_na_cama": "nao",
+        "ronronando": "nao",
+        "local": "quarto",
+        "situacao_antes": "quer interacao",
+    },
+    "Miado de carinho": {
+        "tipo_miado": "curto",
+        "intensidade": "baixa",
+        "duracao": "media",
+        "repeticao": "repetido",
+        "perto_porta": "nao",
+        "perto_caixa": "nao",
+        "humanos_na_cama": "nao",
+        "ronronando": "sim",
+        "local": "quarto",
+        "situacao_antes": "procurando colo e contato",
+    },
 }
+
+
+def now_sp() -> datetime:
+    return datetime.now(TIMEZONE)
+
 
 
 def ensure_data_file() -> None:
@@ -94,6 +130,7 @@ def ensure_data_file() -> None:
                     "perto_porta": "nao",
                     "perto_caixa": "nao",
                     "humanos_na_cama": "sim",
+                    "ronronando": "nao",
                     "situacao_antes": "humanos ainda dormindo",
                     "classe_real": "pedido_atencao",
                 },
@@ -109,6 +146,7 @@ def ensure_data_file() -> None:
                     "perto_porta": "sim",
                     "perto_caixa": "nao",
                     "humanos_na_cama": "nao",
+                    "ronronando": "nao",
                     "situacao_antes": "porta fechada",
                     "classe_real": "pedido_porta",
                 },
@@ -124,17 +162,36 @@ def ensure_data_file() -> None:
                     "perto_porta": "nao",
                     "perto_caixa": "sim",
                     "humanos_na_cama": "nao",
+                    "ronronando": "nao",
                     "situacao_antes": "entrou na caixa",
                     "classe_real": "caixa_areia_coco",
+                },
+                {
+                    "data": "2026-04-16",
+                    "hora": "21:00",
+                    "fonte": "demo",
+                    "local": "quarto",
+                    "tipo_miado": "curto",
+                    "intensidade": "baixa",
+                    "duracao": "media",
+                    "repeticao": "repetido",
+                    "perto_porta": "nao",
+                    "perto_caixa": "nao",
+                    "humanos_na_cama": "nao",
+                    "ronronando": "sim",
+                    "situacao_antes": "procurando colo e contato",
+                    "classe_real": "miado_carinho",
                 },
             ]
         )
         demo_data.to_csv(DATA_FILE, index=False)
 
 
+
 def load_data() -> pd.DataFrame:
     ensure_data_file()
     return pd.read_csv(DATA_FILE)
+
 
 
 def save_event(row: dict) -> None:
@@ -143,8 +200,10 @@ def save_event(row: dict) -> None:
     df.to_csv(DATA_FILE, index=False)
 
 
+
 def to_minutes(t: time) -> int:
     return t.hour * 60 + t.minute
+
 
 
 def within_range(current: time, start: time, end: time) -> bool:
@@ -154,14 +213,17 @@ def within_range(current: time, start: time, end: time) -> bool:
     return sm <= cm <= em
 
 
+
 def nearest_meal_distance_minutes(current: time) -> int:
     cm = to_minutes(current)
     return min(abs(cm - to_minutes(meal)) for meal in ROTINA["comidas"])
 
 
+
 def classify_miau(event: dict) -> tuple[str, str, list[tuple[str, int]]]:
     scores = {label: 0 for label in CLASSES}
     hora_evento = datetime.strptime(event["hora"], "%H:%M").time()
+    situacao = event["situacao_antes"].lower()
 
     if event["perto_porta"] == "sim":
         scores["pedido_porta"] += 5
@@ -186,10 +248,24 @@ def classify_miau(event: dict) -> tuple[str, str, list[tuple[str, int]]]:
     if event["tipo_miado"] == "resmungo":
         scores["pedido_atencao"] += 1
 
+    if event["tipo_miado"] == "curto":
+        scores["miado_atencao"] += 2
+    if event["intensidade"] == "baixa":
+        scores["miado_atencao"] += 2
+    if event["repeticao"] in ["varios_miadinhos", "repetido"]:
+        scores["miado_atencao"] += 3
+    if "interacao" in situacao or "interação" in situacao:
+        scores["miado_atencao"] += 2
+
+    if event["ronronando"] == "sim":
+        scores["miado_carinho"] += 5
+    if event["tipo_miado"] in ["curto", "chamado"]:
+        scores["miado_carinho"] += 1
+    if "colo" in situacao or "contato" in situacao or "carinho" in situacao:
+        scores["miado_carinho"] += 3
+
     if event["tipo_miado"] == "resmungo":
         scores["reclamacao_frustracao"] += 4
-
-    situacao = event["situacao_antes"].lower()
     if "cacando" in situacao or "caçando" in situacao:
         scores["reclamacao_frustracao"] += 3
     if "mandou descer" in situacao or "contrariada" in situacao:
@@ -204,6 +280,8 @@ def classify_miau(event: dict) -> tuple[str, str, list[tuple[str, int]]]:
     explanations = {
         "pedido_porta": "Hipótese principal: ela quer acesso a um ambiente. O padrão combina com miado de porta, mais longo e insistente.",
         "pedido_atencao": "Hipótese principal: ela quer atenção ou quer iniciar a rotina com vocês.",
+        "miado_atencao": "Hipótese principal: ela quer atenção. Esse padrão combina com miado baixo em vários miadinhos curtos.",
+        "miado_carinho": "Hipótese principal: ela está buscando carinho ou proximidade. O ronronado junto com o miado reforça essa hipótese.",
         "reclamacao_frustracao": "Hipótese principal: ela está reclamando ou frustrada com alguma interrupção ou tentativa de caçar.",
         "caixa_areia_coco": "Hipótese principal: miado associado ao uso da caixa, especialmente no horário em que isso costuma acontecer.",
         "indefinido": "Não há contexto suficiente para uma conclusão forte. Vale observar local e o que acontece logo depois.",
@@ -211,10 +289,10 @@ def classify_miau(event: dict) -> tuple[str, str, list[tuple[str, int]]]:
     return best_label, explanations[best_label], ranking
 
 
+
 def build_event_from_demo(sample_name: str, hora_str: str) -> dict:
     sample = DEMO_MIAUS[sample_name]
-    agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
-
+    agora = now_sp()
     return {
         "data": agora.strftime("%Y-%m-%d"),
         "hora": hora_str,
@@ -227,8 +305,26 @@ def build_event_from_demo(sample_name: str, hora_str: str) -> dict:
         "perto_porta": sample["perto_porta"],
         "perto_caixa": sample["perto_caixa"],
         "humanos_na_cama": sample["humanos_na_cama"],
+        "ronronando": sample["ronronando"],
         "situacao_antes": sample["situacao_antes"],
     }
+
+
+
+def suggest_sample_from_audio(audio) -> str:
+    if not audio:
+        return "Miado ao acordar"
+
+    tamanho = getattr(audio, "size", 0)
+    nome = getattr(audio, "name", "").lower()
+
+    if "ogg" in nome or tamanho <= 25000:
+        return "Miado de atencao"
+    if 25001 <= tamanho <= 45000:
+        return "Miado de reclamacao"
+    if 45001 <= tamanho <= 70000:
+        return "Miado de carinho"
+    return "Miado de porta"
 
 
 st.markdown(
@@ -264,9 +360,7 @@ st.markdown(
     """
     <div class='hero'>
         <h1>🐱 Nala Translator</h1>
-        <p class='small'>
-            Protótipo para interpretar miados com base em contexto, rotina e padrões provisórios.
-        </p>
+        <p class='small'>Protótipo para interpretar miados com base em contexto, rotina e padrões provisórios. Nesta versão, o app já sugere automaticamente um tipo provável de miado ao receber um áudio.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -282,7 +376,7 @@ with colA:
         horizontal=True,
     )
 
-    agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
+    agora = now_sp()
     hora_str = agora.strftime("%H:%M")
     st.caption(f"🕒 Horário automático: {hora_str}")
 
@@ -291,11 +385,18 @@ with colA:
         st.info("Use isso na apresentação de hoje. Depois você pode substituir por gravações reais da Nala.")
         event = build_event_from_demo(sample_name, hora_str)
     else:
-        audio = st.file_uploader("Envie um áudio de miado", type=["wav", "mp3", "m4a"])
-        st.caption("Neste MVP, o áudio ainda não é analisado automaticamente. Ele serve como etapa visual de evolução do projeto.")
+        audio = st.file_uploader("Envie um áudio de miado", type=["wav", "mp3", "m4a", "ogg"])
+        st.caption("Modelo simplificado de análise de áudio (heurístico). Em evolução para classificação real com features acústicas.")
+
+        sample_name = None
+        if audio:
+            sample_name = suggest_sample_from_audio(audio)
+            st.success(f"🔍 Áudio analisado automaticamente → {sample_name}")
+
         sample_name = st.selectbox(
-            "Enquanto o classificador de áudio real não fica pronto, escolha a amostra mais parecida",
-            list(DEMO_MIAUS.keys())
+            "Tipo sugerido de miado",
+            list(DEMO_MIAUS.keys()),
+            index=list(DEMO_MIAUS.keys()).index(sample_name) if sample_name else 0,
         )
         event = build_event_from_demo(sample_name, hora_str)
         event["fonte"] = "audio_upload" if audio else "demo"
@@ -331,6 +432,7 @@ with colA:
                 "perto_porta": event["perto_porta"],
                 "perto_caixa": event["perto_caixa"],
                 "humanos_na_cama": event["humanos_na_cama"],
+                "ronronando": event["ronronando"],
                 "situacao_antes": event["situacao_antes"],
                 "classe_real": classe,
             }
@@ -342,19 +444,27 @@ with colB:
         """
         <div class='card'>
             <b>Hoje</b><br>
-            O app usa miados provisórios e regras de contexto com base no comportamento da Nala.
+            O app usa contexto comportamental, rotina e amostras provisórias de miado.
+        </div>
+        <div class='card'>
+            <b>Áudio</b><br>
+            Quando você envia um áudio, o sistema sugere automaticamente um padrão inicial para acelerar a interpretação.
         </div>
         <div class='card'>
             <b>Próxima etapa</b><br>
             Trocar as amostras provisórias por gravações reais e extrair características do áudio.
         </div>
-        <div class='card'>
-            <b>Visão futura</b><br>
-            Classificação automática por áudio real usando um modelo treinado com os miados dela.
-        </div>
         """,
         unsafe_allow_html=True,
     )
+
+    st.markdown("### Tipos já mapeados")
+    st.write("- Miado de porta")
+    st.write("- Miado ao acordar")
+    st.write("- Miado na caixa")
+    st.write("- Miado de reclamação")
+    st.write("- Miado de atenção")
+    st.write("- Miado de carinho")
 
 st.markdown("---")
 
