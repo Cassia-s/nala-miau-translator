@@ -393,11 +393,15 @@ with colA:
             sample_name = suggest_sample_from_audio(audio)
             st.success(f"🔍 Áudio analisado automaticamente → {sample_name}")
 
-        sample_name = st.selectbox(
-            "Tipo sugerido de miado",
-            list(DEMO_MIAUS.keys()),
-            index=list(DEMO_MIAUS.keys()).index(sample_name) if sample_name else 0,
-        )
+        usar_ajuste_manual = st.toggle("Ajustar previsão manualmente", value=False)
+
+        if usar_ajuste_manual:
+            sample_name = st.selectbox(
+                "Tipo de miado",
+                list(DEMO_MIAUS.keys()),
+                index=list(DEMO_MIAUS.keys()).index(sample_name) if sample_name else 0,
+            )
+
         event = build_event_from_demo(sample_name, hora_str)
         event["fonte"] = "audio_upload" if audio else "demo"
 
