@@ -160,12 +160,7 @@ def nearest_meal_distance_minutes(current: time) -> int:
 
 def classify_miau(event: dict) -> tuple[str, str, list[tuple[str, int]]]:
     scores = {label: 0 for label in CLASSES}
-    from zoneinfo import ZoneInfo
-
-agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
-hora_str = agora.strftime("%H:%M")
-
-st.caption(f"🕒 Horário automático: {hora_str}")
+    hora_evento = datetime.strptime(event["hora"], "%H:%M").time()
 
     if event["perto_porta"] == "sim":
         scores["pedido_porta"] += 5
@@ -265,7 +260,7 @@ st.markdown(
     """
     <div class='hero'>
         <h1>🐱 Nala Translator</h1>
-        <p class='small'/p>
+        <p class='small'>Protótipo para interpretar miados com menos formulário e mais experiência de uso. Hoje ele funciona com amostras provisórias e regras comportamentais; depois você pode trocar pelos áudios reais da Nala.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -342,6 +337,13 @@ with colB:
         unsafe_allow_html=True,
     )
 
+    st.markdown("### Perfil da Nala")
+    st.write("- 5 meses")
+    st.write("- Mia pouco")
+    st.write("- Mais vocal de madrugada/manhã e à noite")
+    st.write("- Miado de porta é longo e crescente")
+    st.write("- Miado na caixa ocorre durante o cocô")
+
 st.markdown("---")
 
 aba1, aba2 = st.tabs(["Eventos salvos", "Resumo"])
@@ -358,4 +360,3 @@ with aba2:
 
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button("Baixar CSV", data=csv, file_name="nala_miados.csv", mime="text/csv")
-
