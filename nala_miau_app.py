@@ -382,7 +382,6 @@ with colA:
 
     if modo == "Escolher um miado provisório":
         sample_name = st.selectbox("Escolha o tipo de miado", list(DEMO_MIAUS.keys()))
-        st.info("Use isso na apresentação de hoje. Depois você pode substituir por gravações reais da Nala.")
         event = build_event_from_demo(sample_name, hora_str)
     else:
         audio = st.file_uploader("Envie um áudio de miado", type=["wav", "mp3", "m4a", "ogg"])
