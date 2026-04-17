@@ -388,9 +388,9 @@ with colA:
         audio = st.file_uploader("Envie um áudio de miado", type=["wav", "mp3", "m4a", "ogg"])
         st.caption("Modelo simplificado de análise de áudio (heurístico). Em evolução para classificação real com features acústicas.")
 
-        sample_name = None
-        if audio:
-            sample_name = suggest_sample_from_audio(audio)
+        sample_name = "Miado ao acordar"  # valor padrão seguro
+
+        if audio: sample_name = suggest_sample_from_audio(audio)
             st.success(f"🔍 Áudio analisado automaticamente → {sample_name}")
 
         usar_ajuste_manual = st.toggle("Ajustar previsão manualmente", value=False)
