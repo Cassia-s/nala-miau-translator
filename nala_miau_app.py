@@ -160,7 +160,12 @@ def nearest_meal_distance_minutes(current: time) -> int:
 
 def classify_miau(event: dict) -> tuple[str, str, list[tuple[str, int]]]:
     scores = {label: 0 for label in CLASSES}
-    hora_evento = datetime.strptime(event["hora"], "%H:%M").time()
+    from zoneinfo import ZoneInfo
+
+agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
+hora_str = agora.strftime("%H:%M")
+
+st.caption(f"🕒 Horário automático: {hora_str}")
 
     if event["perto_porta"] == "sim":
         scores["pedido_porta"] += 5
